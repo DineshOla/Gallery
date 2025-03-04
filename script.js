@@ -1,6 +1,7 @@
 // Select elements
 const allPhotosGallery = document.getElementById("all-photos-gallery");
 const favoritesGallery = document.getElementById("favorites-gallery");
+const snapchatGallery = document.getElementById("snapchat-gallery");
 const binGallery = document.getElementById("bin-gallery");
 const lightbox = document.querySelector(".lightbox");
 const lightboxImg = document.querySelector(".lightbox-image");
@@ -63,7 +64,7 @@ function navigate(step) {
 // Update gallery images and reattach listeners
 function updateGalleryImages() {
     console.log("Updating gallery images");
-    galleryImages = document.querySelectorAll(".gallery img");
+    galleryImages = document.querySelectorAll("#all-photos-gallery img, #favorites-gallery img, #snapchat-gallery img, #bin-gallery img");
     reattachImageListeners();
 }
 
@@ -86,15 +87,27 @@ function handleImageClick(event) {
     }
 }
 
-// Get original heart icon
+// Get original heart icon (for All Photos and Snapchat)
 function getOriginalHeart(img) {
     const allPhotosContainers = allPhotosGallery.querySelectorAll(".photo-container");
+    const snapchatContainers = snapchatGallery.querySelectorAll(".photo-container");
+    
+    // Check All Photos
     for (let container of allPhotosContainers) {
         const containerImg = container.querySelector("img");
         if (containerImg && containerImg.src === img.src && containerImg.alt === img.alt) {
             return container.querySelector(".heart-icon");
         }
     }
+    
+    // Check Snapchat
+    for (let container of snapchatContainers) {
+        const containerImg = container.querySelector("img");
+        if (containerImg && containerImg.src === img.src && containerImg.alt === img.alt) {
+            return container.querySelector(".heart-icon");
+        }
+    }
+    
     return null;
 }
 
@@ -112,7 +125,6 @@ function toggleFavorite(heart) {
         heart.innerHTML = '<i class="fas fa-heart"></i>';
         const newPhotoContainer = photoContainer.cloneNode(true);
         newPhotoContainer.querySelector(".heart-icon").remove();
-        newPhotoContainer.querySelector(".delete-icon").remove();
         favoritesGallery.appendChild(newPhotoContainer);
     } else {
         console.log("Unfavoriting image:", img.src);
@@ -130,7 +142,7 @@ function toggleFavorite(heart) {
     if (lightbox.style.display === "flex") updateLightbox();
 }
 
-// Delete image and move to bin
+// Delete image and move to bin (used only by lightbox)
 function deleteImage(container) {
     console.log("Deleting image from container:", container);
     const img = container.querySelector("img");
@@ -151,7 +163,8 @@ function deleteImage(container) {
         }
     });
     
-    container.remove(); // Remove from All Photos
+    // Remove from original album (All Photos or Snapchat)
+    container.remove();
     updateGalleryImages();
     if (lightbox.style.display === "flex") {
         if (galleryImages.length === 0) {
@@ -165,23 +178,13 @@ function deleteImage(container) {
 // Initial setup
 updateGalleryImages();
 
-// Heart icon functionality (All Photos)
-const heartIcons = document.querySelectorAll(".heart-icon");
+// Heart icon functionality (All Photos and Snapchat)
+const heartIcons = document.querySelectorAll("#all-photos-gallery .heart-icon, #snapchat-gallery .heart-icon");
 heartIcons.forEach((heart) => {
     heart.addEventListener("click", (e) => {
         console.log("Heart icon clicked in gallery");
         e.stopPropagation();
         toggleFavorite(heart);
-    });
-});
-
-// Delete icon functionality (All Photos)
-const deleteIcons = document.querySelectorAll(".delete-icon");
-deleteIcons.forEach((icon) => {
-    icon.addEventListener("click", (e) => {
-        console.log("Delete icon clicked in gallery");
-        e.stopPropagation();
-        deleteImage(icon.parentElement);
     });
 });
 
@@ -195,11 +198,22 @@ lightboxHeart.addEventListener("click", (e) => {
     }
 });
 
-// Lightbox delete functionality
+// Lightbox delete functionality (for All Photos and Snapchat)
 lightboxDelete.addEventListener("click", (e) => {
     console.log("Lightbox delete clicked");
     e.stopPropagation();
-    const originalContainer = allPhotosGallery.querySelectorAll(".photo-container")[currentIndex];
+    const allPhotosContainers = allPhotosGallery.querySelectorAll(".photo-container");
+    const snapchatContainers = snapchatGallery.querySelectorAll(".photo-container");
+    let originalContainer;
+
+    // Find the original container in All Photos or Snapchat
+    Array.from(allPhotosContainers).concat(Array.from(snapchatContainers)).forEach((container) => {
+        const img = container.querySelector("img");
+        if (img && img.src === galleryImages[currentIndex].src && img.alt === galleryImages[currentIndex].alt) {
+            originalContainer = container;
+        }
+    });
+
     if (originalContainer) {
         deleteImage(originalContainer);
     }
