@@ -11,12 +11,30 @@ const lightboxDelete = document.querySelector(".lightbox-delete");
 const closeBtn = document.querySelector(".close");
 const prevBtn = document.querySelector(".prev");
 const nextBtn = document.querySelector(".next");
-let galleryImages = document.querySelectorAll(".gallery img");
+let galleryImages = [];
 let currentIndex = 0;
+
+// Debounce function to limit frequent calls
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Ensure DOM is loaded before running initial setup
+document.addEventListener("DOMContentLoaded", () => {
+    updateGalleryImages();
+    initializeHeartIcons();
+});
 
 // Update lightbox content
 function updateLightbox() {
-    console.log("Updating lightbox for index:", currentIndex);
     if (!galleryImages.length) {
         console.error("No images found in galleryImages");
         closeLightbox();
@@ -24,7 +42,6 @@ function updateLightbox() {
     }
     currentIndex = Math.max(0, Math.min(currentIndex, galleryImages.length - 1));
     const img = galleryImages[currentIndex];
-    console.log("Setting lightbox image to:", img.src);
     lightboxImg.src = img.src;
     caption.textContent = img.alt;
     const originalHeart = getOriginalHeart(img);
@@ -40,7 +57,6 @@ function updateLightbox() {
 
 // Show lightbox
 function showLightbox(index) {
-    console.log("Showing lightbox for index:", index);
     currentIndex = index;
     updateLightbox();
     lightbox.style.display = "flex";
@@ -49,41 +65,38 @@ function showLightbox(index) {
 
 // Close lightbox
 function closeLightbox() {
-    console.log("Closing lightbox");
     lightbox.style.display = "none";
     document.body.style.overflow = "auto";
 }
 
 // Navigate through images
 function navigate(step) {
-    console.log("Navigating by step:", step);
     currentIndex = (currentIndex + step + galleryImages.length) % galleryImages.length;
     updateLightbox();
 }
 
-// Update gallery images and reattach listeners
-function updateGalleryImages() {
-    console.log("Updating gallery images");
+// Update gallery images and reattach listeners (debounced)
+const debouncedUpdateGalleryImages = debounce(() => {
     galleryImages = document.querySelectorAll("#all-photos-gallery img, #favorites-gallery img, #snapchat-gallery img, #bin-gallery img");
     reattachImageListeners();
+}, 250);
+
+function updateGalleryImages() {
+    debouncedUpdateGalleryImages();
 }
 
 // Reattach image click listeners
 function reattachImageListeners() {
-    console.log("Reattaching image listeners, total images:", galleryImages.length);
-    galleryImages.forEach((img, index) => {
+    galleryImages.forEach((img) => {
         img.removeEventListener("click", handleImageClick);
-        img.addEventListener("click", handleImageClick);
+        img.addEventListener("click", handleImageClick, { passive: true }); // Passive for better scroll performance
     });
 }
 
 function handleImageClick(event) {
     const index = Array.from(galleryImages).indexOf(event.target);
-    console.log("Image clicked, index:", index);
     if (index !== -1) {
         showLightbox(index);
-    } else {
-        console.error("Clicked image not found in galleryImages");
     }
 }
 
@@ -92,7 +105,6 @@ function getOriginalHeart(img) {
     const allPhotosContainers = allPhotosGallery.querySelectorAll(".photo-container");
     const snapchatContainers = snapchatGallery.querySelectorAll(".photo-container");
     
-    // Check All Photos
     for (let container of allPhotosContainers) {
         const containerImg = container.querySelector("img");
         if (containerImg && containerImg.src === img.src && containerImg.alt === img.alt) {
@@ -100,7 +112,6 @@ function getOriginalHeart(img) {
         }
     }
     
-    // Check Snapchat
     for (let container of snapchatContainers) {
         const containerImg = container.querySelector("img");
         if (containerImg && containerImg.src === img.src && containerImg.alt === img.alt) {
@@ -113,13 +124,11 @@ function getOriginalHeart(img) {
 
 // Toggle favorite state
 function toggleFavorite(heart) {
-    console.log("Toggling favorite for heart:", heart);
     const photoContainer = heart.parentElement;
     const img = photoContainer.querySelector("img");
     const isFavorited = heart.getAttribute("data-favorited") === "true";
 
     if (!isFavorited) {
-        console.log("Favoriting image:", img.src);
         heart.setAttribute("data-favorited", "true");
         heart.classList.add("favorited");
         heart.innerHTML = '<i class="fas fa-heart"></i>';
@@ -127,7 +136,6 @@ function toggleFavorite(heart) {
         newPhotoContainer.querySelector(".heart-icon").remove();
         favoritesGallery.appendChild(newPhotoContainer);
     } else {
-        console.log("Unfavoriting image:", img.src);
         heart.setAttribute("data-favorited", "false");
         heart.classList.remove("favorited");
         heart.innerHTML = '<i class="far fa-heart"></i>';
@@ -142,9 +150,8 @@ function toggleFavorite(heart) {
     if (lightbox.style.display === "flex") updateLightbox();
 }
 
-// Delete image and move to bin (used only by lightbox)
+// Delete image and move to bin
 function deleteImage(container) {
-    console.log("Deleting image from container:", container);
     const img = container.querySelector("img");
     const newPhotoContainer = document.createElement("div");
     newPhotoContainer.className = "photo-container";
@@ -155,7 +162,6 @@ function deleteImage(container) {
     newPhotoContainer.appendChild(newImg);
     binGallery.appendChild(newPhotoContainer);
     
-    // Remove from Favorites if present
     const favoritesImages = favoritesGallery.querySelectorAll("img");
     favoritesImages.forEach((favImg) => {
         if (favImg.src === img.src && favImg.alt === img.alt) {
@@ -163,7 +169,6 @@ function deleteImage(container) {
         }
     });
     
-    // Remove from original album (All Photos or Snapchat)
     container.remove();
     updateGalleryImages();
     if (lightbox.style.display === "flex") {
@@ -175,38 +180,33 @@ function deleteImage(container) {
     }
 }
 
-// Initial setup
-updateGalleryImages();
-
-// Heart icon functionality (All Photos and Snapchat)
-const heartIcons = document.querySelectorAll("#all-photos-gallery .heart-icon, #snapchat-gallery .heart-icon");
-heartIcons.forEach((heart) => {
-    heart.addEventListener("click", (e) => {
-        console.log("Heart icon clicked in gallery");
-        e.stopPropagation();
-        toggleFavorite(heart);
+// Initialize heart icons
+function initializeHeartIcons() {
+    const heartIcons = document.querySelectorAll("#all-photos-gallery .heart-icon, #snapchat-gallery .heart-icon");
+    heartIcons.forEach((heart) => {
+        heart.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleFavorite(heart);
+        }, { passive: true });
     });
-});
+}
 
 // Lightbox heart functionality
 lightboxHeart.addEventListener("click", (e) => {
-    console.log("Lightbox heart clicked");
     e.stopPropagation();
     const originalHeart = getOriginalHeart(galleryImages[currentIndex]);
     if (originalHeart) {
         toggleFavorite(originalHeart);
     }
-});
+}, { passive: true });
 
-// Lightbox delete functionality (for All Photos and Snapchat)
+// Lightbox delete functionality
 lightboxDelete.addEventListener("click", (e) => {
-    console.log("Lightbox delete clicked");
     e.stopPropagation();
     const allPhotosContainers = allPhotosGallery.querySelectorAll(".photo-container");
     const snapchatContainers = snapchatGallery.querySelectorAll(".photo-container");
     let originalContainer;
 
-    // Find the original container in All Photos or Snapchat
     Array.from(allPhotosContainers).concat(Array.from(snapchatContainers)).forEach((container) => {
         const img = container.querySelector("img");
         if (img && img.src === galleryImages[currentIndex].src && img.alt === galleryImages[currentIndex].alt) {
@@ -217,24 +217,24 @@ lightboxDelete.addEventListener("click", (e) => {
     if (originalContainer) {
         deleteImage(originalContainer);
     }
-});
+}, { passive: true });
 
 // Close button listener
-closeBtn.addEventListener("click", closeLightbox);
+closeBtn.addEventListener("click", closeLightbox, { passive: true });
 lightbox.addEventListener("click", (e) => {
     if (e.target === lightbox) closeLightbox();
-});
+}, { passive: true });
 
 // Navigation listeners
 prevBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     navigate(-1);
-});
+}, { passive: true });
 
 nextBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     navigate(1);
-});
+}, { passive: true });
 
 // Keyboard navigation
 document.addEventListener("keydown", (e) => {
@@ -247,7 +247,7 @@ document.addEventListener("keydown", (e) => {
             navigate(1);
         }
     }
-});
+}, { passive: true });
 
 // Touch swipe support for mobile
 let touchStartX = 0;
@@ -255,26 +255,21 @@ let touchEndX = 0;
 
 lightbox.addEventListener("touchstart", (e) => {
     touchStartX = e.touches[0].clientX;
-    console.log("Touch start at X:", touchStartX);
-});
+}, { passive: true });
 
 lightbox.addEventListener("touchend", (e) => {
     touchEndX = e.changedTouches[0].clientX;
-    console.log("Touch end at X:", touchEndX);
     handleSwipe();
-});
+}, { passive: true });
 
 function handleSwipe() {
-    const swipeThreshold = 50; // Minimum distance for a swipe
+    const swipeThreshold = 50;
     const swipeDistance = touchStartX - touchEndX;
-    console.log("Swipe distance:", swipeDistance);
     if (Math.abs(swipeDistance) > swipeThreshold) {
         if (swipeDistance > 0) {
-            console.log("Swiping left, navigating to next");
-            navigate(1); // Swipe left, go to next
+            navigate(1);
         } else {
-            console.log("Swiping right, navigating to previous");
-            navigate(-1); // Swipe right, go to previous
+            navigate(-1);
         }
     }
 }

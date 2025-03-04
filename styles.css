@@ -9,6 +9,8 @@ body {
     background-color: #000;
     color: #fff;
     line-height: 1.6;
+    /* Improve rendering performance */
+    will-change: overflow;
 }
 
 .gallery-container {
@@ -44,10 +46,14 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 8px;
     padding: 10px;
+    /* Optimize for lazy loading */
+    contain: layout;
 }
 
 .photo-container {
     position: relative;
+    /* Improve rendering of images */
+    will-change: opacity;
 }
 
 .gallery img {
@@ -57,6 +63,8 @@ body {
     border-radius: 12px;
     cursor: pointer;
     transition: opacity 0.3s ease;
+    /* Optimize image decoding */
+    image-rendering: auto;
 }
 
 .gallery img:hover {
@@ -114,20 +122,30 @@ body {
     align-items: center;
     z-index: 1000;
     padding: 20px;
+    /* Improve rendering */
+    contain: strict;
 }
 
 .lightbox-content {
     position: relative;
-    max-width: 95%;
-    max-height: 90vh;
+    max-width: 100%;
+    max-height: 95vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .lightbox-image {
-    max-width: 100%;
-    max-height: 85vh;
+    width: auto;
+    height: auto;
+    max-width: 95vw;
+    max-height: 90vh;
     border-radius: 8px;
     transition: opacity 0.3s ease;
     display: block;
+    object-fit: contain;
+    /* Optimize image decoding */
+    image-rendering: auto;
 }
 
 .caption {
